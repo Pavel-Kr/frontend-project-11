@@ -13,13 +13,14 @@
                     <div class="col-8 mx-auto">
                         <h1 class="display-3">RSS агрегатор</h1>
                         <p class="lead">Начните читать RSS сегодня! Это легко, это красиво.</p>
-                        <form class="text-body d-flex mb-4">
+                        <form class="text-body d-flex mb-4 rss-form">
                             <div class="form-floating flex-grow-1 me-3">
-                                <input type="email" name="rss" class="form-control" placeholder="test">
-                                <label for="rss">Ссылка RSS</label>
+                                <input type="text" name="url" class="form-control" placeholder="Ссылка RSS" autofocus required autocomplete="off" aria-label="url">
+                                <label for="url">Ссылка RSS</label>
                             </div>
                             <input type="submit" class="btn btn-primary btn-lg px-5" value="Добавить">
                         </form>
+                        <div class="feedback small position-absolute"></div>
                     </div>
                 </div>
             </div>
