@@ -1,4 +1,4 @@
-const render = (path, value) => {
+const render = (path, value, i18nextInstance) => {
   const rssForm = document.querySelector('form.rss-form');
   if (path === 'rssForm.state') {
     const urlInput = rssForm.querySelector('input[aria-label="url"]');
@@ -19,9 +19,9 @@ const render = (path, value) => {
       default:
         throw new Error(`Invalid state: ${value}`);
     }
-  } else if (path === 'rssForm.feedback') {
+  } else if (path === 'rssForm.feedbackType') {
     const feedbackElement = document.querySelector('.feedback');
-    feedbackElement.textContent = value;
+    feedbackElement.textContent = i18nextInstance.t(value);
   }
 };
 

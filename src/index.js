@@ -1,33 +1,50 @@
-import { object, string } from 'yup';
+import { object, string, setLocale } from 'yup';
 import onChange from 'on-change';
+import i18next from 'i18next';
 
 import './scss/styles.scss';
 import render from './view.js';
+import resources from './locale/index.js';
 
 const app = () => {
   const state = {
     rssForm: {
       state: '',
-      feedback: '',
+      feedbackType: '',
     },
     addedUrls: [],
   };
 
+  const i18nextInstance = i18next.createInstance();
+  i18nextInstance.init({
+    lng: 'ru',
+    debug: true,
+    resources,
+  });
+
+  setLocale({
+    mixed: {
+      default: 'invalidKey',
+      notOneOf: () => ({ key: 'duplicateUrl' }),
+    },
+    string: {
+      url: () => ({ key: 'invalidUrl' }),
+    },
+  });
+
   const validateUrl = (url) => {
     const schema = object({
       url: string()
-        .url('Link must be a valid URL')
+        .url()
         .required()
-        .notOneOf(state.addedUrls, 'RSS already exists'),
+        .notOneOf(state.addedUrls),
     });
     return schema.validate({ url });
   };
 
   const rssForm = document.querySelector('form.rss-form');
 
-  const watchedState = onChange(state, render);
-
-  // https://aljazeera.com/xml/rss/all.xml
+  const watchedState = onChange(state, (path, value) => render(path, value, i18nextInstance));
 
   rssForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -38,11 +55,11 @@ const app = () => {
     validateUrl(url)
       .then(() => {
         watchedState.rssForm.state = 'valid';
-        watchedState.rssForm.feedback = 'RSS was successfully loaded';
+        watchedState.rssForm.feedbackType = 'success';
         watchedState.addedUrls.push(url);
       })
       .catch((err) => {
-        [watchedState.rssForm.feedback] = err.errors;
+        watchedState.rssForm.feedbackType = err.errors[0].key;
         watchedState.rssForm.state = 'invalid';
       });
   });
