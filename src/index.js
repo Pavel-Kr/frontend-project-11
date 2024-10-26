@@ -8,7 +8,7 @@ import render from './view.js';
 import resources from './locale/index.js';
 import parseXML from './parseXML.js';
 
-const app = () => {
+const init = () => {
   const state = {
     rssForm: {
       state: '',
@@ -36,6 +36,12 @@ const app = () => {
     },
   });
 
+  return { state, i18nextInstance };
+};
+
+const app = () => {
+  const { state, i18nextInstance } = init();
+
   const validateUrl = (url) => {
     const schema = object({
       url: string()
@@ -46,9 +52,9 @@ const app = () => {
     return schema.validate({ url });
   };
 
-  const rssForm = document.querySelector('form.rss-form');
-
   const watchedState = onChange(state, (path, value) => render(path, value, i18nextInstance));
+
+  const rssForm = document.querySelector('form.rss-form');
 
   rssForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -57,35 +63,36 @@ const app = () => {
     const url = data.get('url');
 
     validateUrl(url)
-      .then(() => {
-        axios.get(`https://allorigins.hexlet.app/get?url=${encodeURIComponent(url)}&disableCache=true`)
-          .then((response) => {
-            const result = parseXML(response.data.contents);
-            console.log(result);
-            if (result.ok) {
-              watchedState.rssForm.state = 'valid';
-              watchedState.rssForm.feedbackType = 'success';
-              watchedState.addedUrls.push(url);
+      .then(() => axios.get(`https://allorigins.hexlet.app/get?url=${encodeURIComponent(url)}&disableCache=true`))
+      .then((response) => {
+        const result = parseXML(response.data.contents);
+        if (result.ok) {
+          watchedState.rssForm.state = 'valid';
+          watchedState.rssForm.feedbackType = 'success';
+          watchedState.addedUrls.push(url);
 
-              const { title, description, posts } = result;
-              const feed = { title, description };
-              watchedState.feeds.unshift(feed);
-              watchedState.posts.unshift(...posts);
-            } else {
-              const { reason } = result;
-              watchedState.rssForm.state = 'invalid';
-              watchedState.rssForm.feedbackType = reason;
-            }
-          })
-          .catch(() => {
-            watchedState.rssForm.state = 'invalid';
-            watchedState.rssForm.feedbackType = 'networkError';
-          });
+          const { title, description, posts } = result;
+          const feed = { title, description };
+          watchedState.feeds.unshift(feed);
+          watchedState.posts.unshift(...posts);
+        } else {
+          const { reason } = result;
+          watchedState.rssForm.state = 'invalid';
+          watchedState.rssForm.feedbackType = reason;
+        }
       })
       .catch((err) => {
-        console.log(err);
-        watchedState.rssForm.feedbackType = err.errors[0].key;
         watchedState.rssForm.state = 'invalid';
+        switch (err.name) {
+          case 'ValidationError':
+            watchedState.rssForm.feedbackType = err.errors[0].key;
+            break;
+          case 'AxiosError':
+            watchedState.rssForm.feedbackType = 'networkError';
+            break;
+          default:
+            console.log(`Unknown error: ${err.name}`);
+        }
       });
   });
 };
