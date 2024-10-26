@@ -60,6 +60,16 @@ const renderFeeds = (feeds, i18nextInstance) => {
   feedContainer.append(cardContainer);
 };
 
+const setModal = (header, body, link) => {
+  const postModal = document.querySelector('#postModal');
+  const modalTitle = postModal.querySelector('.modal-title');
+  const modalBody = postModal.querySelector('.modal-body');
+  const modalLink = postModal.querySelector('a.post-link');
+  modalTitle.textContent = header;
+  modalBody.textContent = body;
+  modalLink.setAttribute('href', link);
+};
+
 const renderPosts = (posts, i18nextInstance) => {
   const postsContainer = document.querySelector('#posts');
   postsContainer.innerHTML = '';
@@ -79,10 +89,19 @@ const renderPosts = (posts, i18nextInstance) => {
     const postLink = document.createElement('a');
     postLink.textContent = post.title;
     postLink.setAttribute('href', post.link);
+    postLink.addEventListener('click', () => {
+      postLink.classList.add('link-secondary');
+    });
 
     const watchButton = document.createElement('button');
     watchButton.classList.add('btn', 'btn-outline-primary', 'btn-sm');
     watchButton.textContent = i18nextInstance.t('watch');
+    watchButton.setAttribute('data-bs-toggle', 'modal');
+    watchButton.setAttribute('data-bs-target', '#postModal');
+    watchButton.addEventListener('click', () => {
+      postLink.classList.add('link-secondary');
+      setModal(post.title, post.description, post.link);
+    });
 
     listElement.append(postLink, watchButton);
     listContainer.append(listElement);
