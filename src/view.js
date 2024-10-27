@@ -1,3 +1,5 @@
+import { Modal } from 'bootstrap';
+
 const renderState = (state) => {
   const rssForm = document.querySelector('form.rss-form');
   const urlInput = rssForm.querySelector('input[aria-label="url"]');
@@ -65,6 +67,8 @@ const setModal = (header, body, link) => {
   const modalTitle = postModal.querySelector('.modal-title');
   const modalBody = postModal.querySelector('.modal-body');
   const modalLink = postModal.querySelector('a.post-link');
+  const bsModal = new Modal(postModal);
+  bsModal.show();
   modalTitle.textContent = header;
   modalBody.textContent = body;
   modalLink.setAttribute('href', link);
