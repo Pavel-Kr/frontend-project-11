@@ -4,6 +4,8 @@ import i18next from 'i18next';
 import axios from 'axios';
 
 import './scss/styles.scss';
+import 'bootstrap';
+
 import render from './view.js';
 import resources from './locale/index.js';
 import parseXML from './parseXML.js';
