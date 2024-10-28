@@ -9,6 +9,7 @@ import 'bootstrap';
 import render from './view.js';
 import resources from './locale/index.js';
 import parseXML from './parseXML.js';
+import IdGenerator from './idGenerator.js';
 
 const init = () => {
   const state = {
@@ -67,6 +68,8 @@ const updateFeeds = (state) => {
 
 const app = () => {
   const { state, i18nextInstance } = init();
+  const feedIdGenerator = new IdGenerator();
+  const postIdGenerator = new IdGenerator();
 
   const validateUrl = (url) => {
     const schema = object({
@@ -97,8 +100,15 @@ const app = () => {
           watchedState.rssForm.feedbackType = 'success';
           watchedState.addedUrls.push(url);
 
-          const { title, description, posts } = result;
-          const feed = { title, description };
+          const { title, description, posts: rawPosts } = result;
+          const feed = { id: feedIdGenerator.generateId(), title, description };
+          const posts = rawPosts.map((post) => ({
+            id: postIdGenerator.generateId(),
+            feedId: feed.id,
+            ...post,
+          }));
+          console.log(feed);
+          console.log(posts);
           watchedState.feeds.unshift(feed);
           watchedState.posts.unshift(...posts);
         } else {
@@ -118,6 +128,7 @@ const app = () => {
             break;
           default:
             console.log(`Unknown error: ${err.name}`);
+            console.log(err);
         }
       });
 
