@@ -41,6 +41,30 @@ const init = () => {
   return { state, i18nextInstance };
 };
 
+const updateFeeds = (state) => {
+  const promises = state.addedUrls.map((url) => {
+    const requestUrl = `https://allorigins.hexlet.app/get?url=${encodeURIComponent(url)}&disableCache=true`;
+    return axios.get(requestUrl);
+  });
+  Promise.all(promises)
+    .then((responses) => {
+      const results = responses.map((response) => parseXML(response.data.contents));
+      results.forEach((result) => {
+        if (!result.ok) {
+          return;
+        }
+        const { posts } = result;
+        const titles = state.posts.map((post) => post.title);
+        const includedPosts = posts.filter((post) => !titles.includes(post.title));
+        state.posts.unshift(...includedPosts);
+      });
+      setTimeout(() => updateFeeds(state), 5000);
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
+
 const app = () => {
   const { state, i18nextInstance } = init();
 
@@ -96,6 +120,8 @@ const app = () => {
             console.log(`Unknown error: ${err.name}`);
         }
       });
+
+    updateFeeds(watchedState);
   });
 };
 

@@ -12,8 +12,6 @@ const renderState = (state) => {
       urlInput.classList.remove('is-invalid');
       feedbackElement.classList.remove('text-danger');
       feedbackElement.classList.add('text-success');
-      rssForm.reset();
-      urlInput.focus();
       break;
     default:
       throw new Error(`Invalid state: ${state}`);
@@ -112,8 +110,9 @@ const renderPosts = (posts, i18nextInstance) => {
 };
 
 const render = (path, value, i18nextInstance) => {
-  console.log(path);
   const feedbackElement = document.querySelector('.feedback');
+  const rssForm = document.querySelector('form.rss-form');
+  const urlInput = rssForm.querySelector('input[aria-label="url"]');
   switch (path) {
     case 'rssForm.state':
       renderState(value);
@@ -126,6 +125,10 @@ const render = (path, value, i18nextInstance) => {
       break;
     case 'posts':
       renderPosts(value, i18nextInstance);
+      break;
+    case 'addedUrls':
+      rssForm.reset();
+      urlInput.focus();
       break;
     default:
       // Not an error, just ignore
