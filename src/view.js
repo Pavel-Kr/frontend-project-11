@@ -93,7 +93,7 @@ const renderPosts = (posts, i18nextInstance) => {
 
     const watchButton = document.createElement('button');
     watchButton.classList.add('btn', 'btn-outline-primary', 'btn-sm');
-    watchButton.textContent = i18nextInstance.t('watch');
+    watchButton.textContent = i18nextInstance.t('view');
     watchButton.setAttribute('data-bs-toggle', 'modal');
     watchButton.setAttribute('data-bs-target', '#postModal');
     watchButton.addEventListener('click', () => {

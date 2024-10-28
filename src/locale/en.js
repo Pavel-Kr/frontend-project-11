@@ -5,7 +5,7 @@ export default {
     success: 'RSS was successfully loaded',
     feeds: 'Feeds',
     posts: 'Posts',
-    watch: 'Watch',
+    view: 'View',
     parserError: 'Resource doesn\'t contain valid RSS',
     networkError: 'Network Error',
   },
