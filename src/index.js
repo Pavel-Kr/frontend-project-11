@@ -42,11 +42,10 @@ const init = () => {
   return { state, i18nextInstance };
 };
 
+const getRequestUrl = (url) => `https://allorigins.hexlet.app/get?url=${encodeURIComponent(url)}&disableCache=true`;
+
 const updateFeeds = (state) => {
-  const promises = state.addedUrls.map((url) => {
-    const requestUrl = `https://allorigins.hexlet.app/get?url=${encodeURIComponent(url)}&disableCache=true`;
-    return axios.get(requestUrl);
-  });
+  const promises = state.addedUrls.map((url) => axios.get(getRequestUrl(url)));
   Promise.all(promises)
     .then((responses) => {
       const results = responses.map((response) => parseXML(response.data.contents));
@@ -92,7 +91,7 @@ const app = () => {
     const url = data.get('url');
 
     validateUrl(url)
-      .then(() => axios.get(`https://allorigins.hexlet.app/get?url=${encodeURIComponent(url)}&disableCache=true`))
+      .then(() => axios.get(getRequestUrl(url)))
       .then((response) => {
         const result = parseXML(response.data.contents);
         if (result.ok) {
@@ -100,9 +99,9 @@ const app = () => {
           watchedState.rssForm.feedbackType = 'success';
           watchedState.addedUrls.push(url);
 
-          const { title, description, posts: rawPosts } = result;
-          const feed = { id: feedIdGenerator.generateId(), title, description };
-          const posts = rawPosts.map((post) => ({
+          const { ok, posts: rssPosts, ...rssFeed } = result;
+          const feed = { id: feedIdGenerator.generateId(), ...rssFeed };
+          const posts = rssPosts.map((post) => ({
             id: postIdGenerator.generateId(),
             feedId: feed.id,
             ...post,
