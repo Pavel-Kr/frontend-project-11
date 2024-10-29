@@ -103,7 +103,7 @@ const app = () => {
 
   const watchedState = onChange(
     state,
-    (path, value) => render(path, value, state, i18nextInstance),
+    (path, value) => render(path, value, watchedState, i18nextInstance),
   );
 
   const rssForm = document.querySelector('form.rss-form');

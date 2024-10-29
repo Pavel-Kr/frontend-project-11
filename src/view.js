@@ -87,7 +87,8 @@ const setPostViewed = (postId, state) => {
   });
 };
 
-const renderPosts = (posts, state, i18nextInstance) => {
+const renderPosts = (state, i18nextInstance) => {
+  const posts = state.posts;
   const postsContainer = document.querySelector('#posts');
   postsContainer.innerHTML = '';
   if (posts.length === 0) {
@@ -117,7 +118,6 @@ const renderPosts = (posts, state, i18nextInstance) => {
     watchButton.setAttribute('data-bs-target', '#postModal');
 
     listElement.addEventListener('click', (e) => {
-      postLink.classList.add('link-secondary');
       const btn = e.target.closest('button[data-bs-toggle]');
       if (btn) {
         setModal(post.title, post.description, post.link);
@@ -148,7 +148,8 @@ const render = (path, value, state, i18nextInstance) => {
       renderFeeds(value, i18nextInstance);
       break;
     case 'posts':
-      renderPosts(value, state, i18nextInstance);
+    case 'uiState.posts':
+      renderPosts(state, i18nextInstance);
       break;
     case 'addedUrls':
       rssForm.reset();
