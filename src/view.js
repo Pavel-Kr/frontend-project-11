@@ -68,7 +68,26 @@ const setModal = (header, body, link) => {
   modalLink.setAttribute('href', link);
 };
 
-const renderPosts = (posts, i18nextInstance) => {
+const isPostViewed = (post, state) => {
+  const postUiState = state.uiState.posts.filter((postUi) => postUi.postId === post.id);
+  if (postUiState.length === 0) {
+    console.log(`UI state for post ${post.title} is empty!`);
+    return false;
+  }
+  return postUiState[0].viewed;
+};
+
+const setPostViewed = (postId, state) => {
+  state.uiState.posts.forEach((post) => {
+    if (post.postId === postId) {
+      post.viewed = true; // Why, linter, why?
+      // let { viewed } = post;
+      // viewed = true; <--------- This doesn't work!
+    }
+  });
+};
+
+const renderPosts = (posts, state, i18nextInstance) => {
   const postsContainer = document.querySelector('#posts');
   postsContainer.innerHTML = '';
   if (posts.length === 0) {
@@ -87,18 +106,23 @@ const renderPosts = (posts, i18nextInstance) => {
     const postLink = document.createElement('a');
     postLink.textContent = post.title;
     postLink.setAttribute('href', post.link);
-    postLink.addEventListener('click', () => {
+    if (isPostViewed(post, state)) {
       postLink.classList.add('link-secondary');
-    });
+    }
 
     const watchButton = document.createElement('button');
     watchButton.classList.add('btn', 'btn-outline-primary', 'btn-sm');
     watchButton.textContent = i18nextInstance.t('view');
     watchButton.setAttribute('data-bs-toggle', 'modal');
     watchButton.setAttribute('data-bs-target', '#postModal');
-    watchButton.addEventListener('click', () => {
+
+    listElement.addEventListener('click', (e) => {
       postLink.classList.add('link-secondary');
-      setModal(post.title, post.description, post.link);
+      const btn = e.target.closest('button[data-bs-toggle]');
+      if (btn) {
+        setModal(post.title, post.description, post.link);
+      }
+      setPostViewed(post.id, state);
     });
 
     listElement.append(postLink, watchButton);
@@ -109,7 +133,7 @@ const renderPosts = (posts, i18nextInstance) => {
   postsContainer.append(cardContainer);
 };
 
-const render = (path, value, i18nextInstance) => {
+const render = (path, value, state, i18nextInstance) => {
   const feedbackElement = document.querySelector('.feedback');
   const rssForm = document.querySelector('form.rss-form');
   const urlInput = rssForm.querySelector('input[aria-label="url"]');
@@ -124,7 +148,7 @@ const render = (path, value, i18nextInstance) => {
       renderFeeds(value, i18nextInstance);
       break;
     case 'posts':
-      renderPosts(value, i18nextInstance);
+      renderPosts(value, state, i18nextInstance);
       break;
     case 'addedUrls':
       rssForm.reset();

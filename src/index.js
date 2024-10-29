@@ -11,6 +11,9 @@ import resources from './locale/index.js';
 import parseXML from './parseXML.js';
 import IdGenerator from './idGenerator.js';
 
+let feedIdGenerator;
+let postIdGenerator;
+
 const init = () => {
   const state = {
     rssForm: {
@@ -20,6 +23,9 @@ const init = () => {
     addedUrls: [],
     feeds: [],
     posts: [],
+    uiState: {
+      posts: [],
+    },
   };
 
   const i18nextInstance = i18next.createInstance();
@@ -39,13 +45,26 @@ const init = () => {
     },
   });
 
+  feedIdGenerator = new IdGenerator();
+  postIdGenerator = new IdGenerator();
+
   return { state, i18nextInstance };
 };
 
 const getRequestUrl = (url) => `https://allorigins.hexlet.app/get?url=${encodeURIComponent(url)}&disableCache=true`;
 
+const mapPostToState = (post) => ({
+  id: postIdGenerator.generateId(),
+  ...post,
+});
+
+const mapPostToUiState = (post) => ({
+  postId: post.id,
+  viewed: false,
+});
+
 const updateFeeds = (state) => {
-  const promises = state.addedUrls.map((url) => axios.get(getRequestUrl(url)));
+  const promises = state.feeds.map(({ source }) => axios.get(getRequestUrl(source)));
   Promise.all(promises)
     .then((responses) => {
       const results = responses.map((response) => parseXML(response.data.contents));
@@ -55,7 +74,11 @@ const updateFeeds = (state) => {
         }
         const { posts } = result;
         const titles = state.posts.map((post) => post.title);
-        const includedPosts = posts.filter((post) => !titles.includes(post.title));
+        const includedPosts = posts
+          .filter((post) => !titles.includes(post.title))
+          .map(mapPostToState);
+        const includedPostsUi = includedPosts.map(mapPostToUiState);
+        state.uiState.posts.unshift(...includedPostsUi);
         state.posts.unshift(...includedPosts);
       });
       setTimeout(() => updateFeeds(state), 5000);
@@ -67,8 +90,6 @@ const updateFeeds = (state) => {
 
 const app = () => {
   const { state, i18nextInstance } = init();
-  const feedIdGenerator = new IdGenerator();
-  const postIdGenerator = new IdGenerator();
 
   const validateUrl = (url) => {
     const schema = object({
@@ -80,7 +101,10 @@ const app = () => {
     return schema.validate({ url });
   };
 
-  const watchedState = onChange(state, (path, value) => render(path, value, i18nextInstance));
+  const watchedState = onChange(
+    state,
+    (path, value) => render(path, value, state, i18nextInstance),
+  );
 
   const rssForm = document.querySelector('form.rss-form');
 
@@ -100,15 +124,15 @@ const app = () => {
           watchedState.addedUrls.push(url);
 
           const { ok, posts: rssPosts, ...rssFeed } = result;
-          const feed = { id: feedIdGenerator.generateId(), ...rssFeed };
-          const posts = rssPosts.map((post) => ({
-            id: postIdGenerator.generateId(),
-            feedId: feed.id,
-            ...post,
-          }));
-          console.log(feed);
-          console.log(posts);
+          const feed = {
+            id: feedIdGenerator.generateId(),
+            source: url,
+            ...rssFeed,
+          };
+          const posts = rssPosts.map(mapPostToState);
+          const postsUi = posts.map(mapPostToUiState);
           watchedState.feeds.unshift(feed);
+          watchedState.uiState.posts.unshift(...postsUi);
           watchedState.posts.unshift(...posts);
         } else {
           const { reason } = result;
