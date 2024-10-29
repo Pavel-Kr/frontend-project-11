@@ -108,7 +108,11 @@ const renderPosts = (state, i18nextInstance) => {
     postLink.textContent = post.title;
     postLink.setAttribute('href', post.link);
     if (isPostViewed(post, state)) {
-      postLink.classList.add('link-secondary');
+      postLink.classList.add('link-secondary', 'fw-normal');
+      postLink.classList.remove('fw-bold');
+    } else {
+      postLink.classList.remove('fw-normal');
+      postLink.classList.add('fw-bold');
     }
 
     const watchButton = document.createElement('button');
