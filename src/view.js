@@ -68,27 +68,51 @@ const setModal = (header, body, link) => {
   modalLink.setAttribute('href', link);
 };
 
-const isPostViewed = (post, state) => {
-  const postUiState = state.uiState.posts.filter((postUi) => postUi.postId === post.id);
-  if (postUiState.length === 0) {
-    console.log(`UI state for post ${post.title} is empty!`);
-    return false;
-  }
-  return postUiState[0].viewed;
-};
+const isPostViewed = (postId, state) => state.uiState.viewedPosts.includes(postId);
 
 const setPostViewed = (postId, state) => {
-  state.uiState.posts.forEach((post) => {
-    if (post.postId === postId) {
-      post.viewed = true; // Why, linter, why?
-      // let { viewed } = post;
-      // viewed = true; <--------- This doesn't work!
+  state.uiState.viewedPosts.push(postId);
+};
+
+const createPostElement = (post, state, i18nextInstance) => {
+  const listElement = document.createElement('li');
+  listElement.classList.add('list-group-item', 'border-0', 'd-flex', 'justify-content-between');
+
+  const postLink = document.createElement('a');
+  postLink.textContent = post.title;
+  postLink.setAttribute('href', post.link);
+  if (isPostViewed(post.id, state)) {
+    postLink.classList.add('link-secondary', 'fw-normal');
+    postLink.classList.remove('fw-bold');
+  } else {
+    postLink.classList.remove('fw-normal');
+    postLink.classList.add('fw-bold');
+  }
+
+  const watchButton = document.createElement('button');
+  watchButton.classList.add('btn', 'btn-outline-primary', 'btn-sm');
+  watchButton.textContent = i18nextInstance.t('view');
+  watchButton.setAttribute('data-bs-toggle', 'modal');
+  watchButton.setAttribute('data-bs-target', '#postModal');
+
+  listElement.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-bs-toggle]');
+    const link = e.target.closest('a');
+    if (btn) {
+      setModal(post.title, post.description, post.link);
+      setPostViewed(post.id, state);
+    } else if (link) {
+      setPostViewed(post.id, state);
     }
   });
+
+  listElement.append(postLink, watchButton);
+
+  return listElement;
 };
 
 const renderPosts = (state, i18nextInstance) => {
-  const posts = state.posts;
+  const { posts } = state;
   const postsContainer = document.querySelector('#posts');
   postsContainer.innerHTML = '';
   if (posts.length === 0) {
@@ -101,35 +125,7 @@ const renderPosts = (state, i18nextInstance) => {
   const listContainer = document.createElement('ul');
   listContainer.classList.add('list-group', 'border-0');
   posts.forEach((post) => {
-    const listElement = document.createElement('li');
-    listElement.classList.add('list-group-item', 'border-0', 'd-flex', 'justify-content-between');
-
-    const postLink = document.createElement('a');
-    postLink.textContent = post.title;
-    postLink.setAttribute('href', post.link);
-    if (isPostViewed(post, state)) {
-      postLink.classList.add('link-secondary', 'fw-normal');
-      postLink.classList.remove('fw-bold');
-    } else {
-      postLink.classList.remove('fw-normal');
-      postLink.classList.add('fw-bold');
-    }
-
-    const watchButton = document.createElement('button');
-    watchButton.classList.add('btn', 'btn-outline-primary', 'btn-sm');
-    watchButton.textContent = i18nextInstance.t('view');
-    watchButton.setAttribute('data-bs-toggle', 'modal');
-    watchButton.setAttribute('data-bs-target', '#postModal');
-
-    listElement.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-bs-toggle]');
-      if (btn) {
-        setModal(post.title, post.description, post.link);
-      }
-      setPostViewed(post.id, state);
-    });
-
-    listElement.append(postLink, watchButton);
+    const listElement = createPostElement(post, state, i18nextInstance);
     listContainer.append(listElement);
   });
 
@@ -152,7 +148,7 @@ const render = (path, value, state, i18nextInstance) => {
       renderFeeds(value, i18nextInstance);
       break;
     case 'posts':
-    case 'uiState.posts':
+    case 'uiState.viewedPosts':
       renderPosts(state, i18nextInstance);
       break;
     case 'addedUrls':

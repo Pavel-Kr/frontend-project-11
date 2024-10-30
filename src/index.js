@@ -14,6 +14,28 @@ import IdGenerator from './idGenerator.js';
 let feedIdGenerator;
 let postIdGenerator;
 
+const initI18Next = () => {
+  const i18nextInstance = i18next.createInstance();
+  i18nextInstance.init({
+    lng: 'ru',
+    debug: true,
+    resources,
+  });
+  return i18nextInstance;
+};
+
+const initYup = () => {
+  setLocale({
+    mixed: {
+      default: 'invalidKey',
+      notOneOf: () => ({ key: 'duplicateUrl' }),
+    },
+    string: {
+      url: () => ({ key: 'invalidUrl' }),
+    },
+  });
+};
+
 const init = () => {
   const state = {
     rssForm: {
@@ -24,26 +46,12 @@ const init = () => {
     feeds: [],
     posts: [],
     uiState: {
-      posts: [],
+      viewedPosts: [],
     },
   };
 
-  const i18nextInstance = i18next.createInstance();
-  i18nextInstance.init({
-    lng: 'ru',
-    debug: true,
-    resources,
-  });
-
-  setLocale({
-    mixed: {
-      default: 'invalidKey',
-      notOneOf: () => ({ key: 'duplicateUrl' }),
-    },
-    string: {
-      url: () => ({ key: 'invalidUrl' }),
-    },
-  });
+  const i18nextInstance = initI18Next();
+  initYup();
 
   feedIdGenerator = new IdGenerator();
   postIdGenerator = new IdGenerator();
@@ -56,11 +64,6 @@ const getRequestUrl = (url) => `https://allorigins.hexlet.app/get?url=${encodeUR
 const mapPostToState = (post) => ({
   id: postIdGenerator.generateId(),
   ...post,
-});
-
-const mapPostToUiState = (post) => ({
-  postId: post.id,
-  viewed: false,
 });
 
 const updateFeeds = (state) => {
@@ -77,8 +80,6 @@ const updateFeeds = (state) => {
         const includedPosts = posts
           .filter((post) => !titles.includes(post.title))
           .map(mapPostToState);
-        const includedPostsUi = includedPosts.map(mapPostToUiState);
-        state.uiState.posts.unshift(...includedPostsUi);
         state.posts.unshift(...includedPosts);
       });
       setTimeout(() => updateFeeds(state), 5000);
@@ -130,9 +131,7 @@ const app = () => {
             ...rssFeed,
           };
           const posts = rssPosts.map(mapPostToState);
-          const postsUi = posts.map(mapPostToUiState);
           watchedState.feeds.unshift(feed);
-          watchedState.uiState.posts.unshift(...postsUi);
           watchedState.posts.unshift(...posts);
         } else {
           const { reason } = result;
