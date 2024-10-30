@@ -57,7 +57,12 @@ const init = () => {
   feedIdGenerator = new IdGenerator();
   postIdGenerator = new IdGenerator();
 
-  return { state, i18nextInstance };
+  const watchedState = onChange(
+    state,
+    (path, value) => render(path, value, watchedState, i18nextInstance),
+  );
+
+  return watchedState;
 };
 
 const getRequestUrl = (url) => `https://allorigins.hexlet.app/get?url=${encodeURIComponent(url)}&disableCache=true`;
@@ -90,23 +95,18 @@ const updateFeeds = (state) => {
     });
 };
 
+const validateUrl = (url, state) => {
+  const schema = object({
+    url: string()
+      .url()
+      .required()
+      .notOneOf(state.addedUrls),
+  });
+  return schema.validate({ url });
+};
+
 const app = () => {
-  const { state, i18nextInstance } = init();
-
-  const validateUrl = (url) => {
-    const schema = object({
-      url: string()
-        .url()
-        .required()
-        .notOneOf(state.addedUrls),
-    });
-    return schema.validate({ url });
-  };
-
-  const watchedState = onChange(
-    state,
-    (path, value) => render(path, value, watchedState, i18nextInstance),
-  );
+  const state = init();
 
   const rssForm = document.querySelector('form.rss-form');
 
@@ -116,14 +116,14 @@ const app = () => {
     const data = new FormData(rssForm);
     const url = data.get('url');
 
-    validateUrl(url)
+    validateUrl(url, state)
       .then(() => axios.get(getRequestUrl(url)))
       .then((response) => {
         const result = parseXML(response.data.contents);
         if (result.ok) {
-          watchedState.rssForm.state = 'valid';
-          watchedState.rssForm.feedbackType = 'success';
-          watchedState.addedUrls.push(url);
+          state.rssForm.state = 'valid';
+          state.rssForm.feedbackType = 'success';
+          state.addedUrls.push(url);
 
           const { ok, posts: rssPosts, ...rssFeed } = result;
           const feed = {
@@ -132,22 +132,22 @@ const app = () => {
             ...rssFeed,
           };
           const posts = rssPosts.map(mapPostToState);
-          watchedState.feeds.unshift(feed);
-          watchedState.posts.unshift(...posts);
+          state.feeds.unshift(feed);
+          state.posts.unshift(...posts);
         } else {
           const { reason } = result;
-          watchedState.rssForm.state = 'invalid';
-          watchedState.rssForm.feedbackType = reason;
+          state.rssForm.state = 'invalid';
+          state.rssForm.feedbackType = reason;
         }
       })
       .catch((err) => {
-        watchedState.rssForm.state = 'invalid';
+        state.rssForm.state = 'invalid';
         switch (err.name) {
           case 'ValidationError':
-            watchedState.rssForm.feedbackType = err.errors[0].key;
+            state.rssForm.feedbackType = err.errors[0].key;
             break;
           case 'AxiosError':
-            watchedState.rssForm.feedbackType = 'networkError';
+            state.rssForm.feedbackType = 'networkError';
             break;
           default:
             console.log(`Unknown error: ${err.name}`);
@@ -155,7 +155,7 @@ const app = () => {
         }
       });
 
-    updateFeeds(watchedState);
+    updateFeeds(state);
   });
 };
 
