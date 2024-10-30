@@ -8,5 +8,6 @@ export default {
     view: 'View',
     parserError: 'Resource doesn\'t contain valid RSS',
     networkError: 'Network Error',
+    empty: 'Should not be empty',
   },
 };

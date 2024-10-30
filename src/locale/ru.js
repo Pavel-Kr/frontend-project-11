@@ -8,5 +8,6 @@ export default {
     view: 'Просмотр',
     parserError: 'Ресурс не содержит валидный RSS',
     networkError: 'Ошибка сети',
+    empty: 'Не должно быть пустым',
   },
 };

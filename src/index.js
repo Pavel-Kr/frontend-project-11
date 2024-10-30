@@ -28,6 +28,7 @@ const initYup = () => {
   setLocale({
     mixed: {
       default: 'invalidKey',
+      required: () => ({ key: 'empty' }),
       notOneOf: () => ({ key: 'duplicateUrl' }),
     },
     string: {
