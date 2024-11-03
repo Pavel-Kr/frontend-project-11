@@ -2,6 +2,7 @@ import { object, string, setLocale } from 'yup';
 import onChange from 'on-change';
 import i18next from 'i18next';
 import axios from 'axios';
+import _ from 'lodash';
 
 import './scss/styles.scss';
 import 'bootstrap';
@@ -9,19 +10,14 @@ import 'bootstrap';
 import render from './view.js';
 import resources from './locale/index.js';
 import parseXML from './parseXML.js';
-import IdGenerator from './idGenerator.js';
-
-let feedIdGenerator;
-let postIdGenerator;
 
 const initI18Next = () => {
   const i18nextInstance = i18next.createInstance();
-  i18nextInstance.init({
+  return i18nextInstance.init({
     lng: 'ru',
     debug: true,
     resources,
   });
-  return i18nextInstance;
 };
 
 const initYup = () => {
@@ -40,10 +36,9 @@ const initYup = () => {
 const init = () => {
   const state = {
     rssForm: {
-      state: '',
-      feedbackType: '',
+      state: 'init',
+      feedbackMessage: '',
     },
-    addedUrls: [],
     feeds: [],
     posts: [],
     uiState: {
@@ -51,24 +46,31 @@ const init = () => {
     },
   };
 
-  const i18nextInstance = initI18Next();
-  initYup();
+  let translationFunc;
 
-  feedIdGenerator = new IdGenerator();
-  postIdGenerator = new IdGenerator();
-
-  const watchedState = onChange(
-    state,
-    (path, value) => render(path, value, watchedState, i18nextInstance),
-  );
-
-  return watchedState;
+  return initI18Next()
+    .then((t) => {
+      translationFunc = t;
+      initYup();
+    })
+    .then(() => {
+      const watchedState = onChange(
+        state,
+        (path, value) => render(path, value, watchedState, translationFunc),
+      );
+      return watchedState;
+    });
 };
 
-const getRequestUrl = (url) => `https://allorigins.hexlet.app/get?url=${encodeURIComponent(url)}&disableCache=true`;
+const getRequestUrl = (urlString) => {
+  const url = new URL('https://allorigins.hexlet.app/get');
+  url.searchParams.set('url', urlString);
+  url.searchParams.set('disableCache', 'true');
+  return url.toString();
+};
 
 const mapPostToState = (post) => ({
-  id: postIdGenerator.generateId(),
+  id: _.uniqueId('post'),
   ...post,
 });
 
@@ -96,65 +98,69 @@ const updateFeeds = (state) => {
 };
 
 const validateUrl = (url, state) => {
+  const sources = state.feeds.map(({ source }) => source);
   const schema = object({
     url: string()
       .url()
       .required()
-      .notOneOf(state.addedUrls),
+      .notOneOf(sources),
   });
   return schema.validate({ url });
 };
 
-const app = () => {
-  const state = init();
-
-  const rssForm = document.querySelector('form.rss-form');
-
-  rssForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    const data = new FormData(rssForm);
-    const url = data.get('url');
-
-    validateUrl(url, state)
-      .then(() => axios.get(getRequestUrl(url)))
-      .then((response) => {
+const processUrl = (url, paramState) => {
+  const state = paramState; // How do you like it, linter? No param reassign, sure
+  validateUrl(url, state)
+    .then(() => axios.get(getRequestUrl(url)))
+    .then((response) => {
+      try {
         const result = parseXML(response.data.contents);
-        if (result.ok) {
-          state.rssForm.state = 'valid';
-          state.rssForm.feedbackType = 'success';
-          state.addedUrls.push(url);
+        state.rssForm.state = 'valid';
+        state.rssForm.feedbackMessage = 'success';
 
-          const { ok, posts: rssPosts, ...rssFeed } = result;
-          const feed = {
-            id: feedIdGenerator.generateId(),
-            source: url,
-            ...rssFeed,
-          };
-          const posts = rssPosts.map(mapPostToState);
-          state.feeds.unshift(feed);
-          state.posts.unshift(...posts);
-        } else {
-          const { reason } = result;
-          state.rssForm.state = 'invalid';
-          state.rssForm.feedbackType = reason;
-        }
-      })
-      .catch((err) => {
+        const { ok, posts: rssPosts, ...rssFeed } = result;
+        const feed = {
+          id: _.uniqueId('feed'),
+          source: url,
+          ...rssFeed,
+        };
+        const posts = rssPosts.map(mapPostToState);
+        state.feeds.unshift(feed);
+        state.posts.unshift(...posts);
+      } catch (e) {
         state.rssForm.state = 'invalid';
-        switch (err.name) {
-          case 'ValidationError':
-            state.rssForm.feedbackType = err.errors[0].key;
-            break;
-          case 'AxiosError':
-            state.rssForm.feedbackType = 'networkError';
-            break;
-          default:
-            console.log(`Unknown error: ${err.name}`);
-            console.log(err);
-        }
-      });
+        state.rssForm.feedbackMessage = e.message;
+      }
+    })
+    .catch((err) => {
+      state.rssForm.state = 'invalid';
+      switch (err.name) {
+        case 'ValidationError':
+          state.rssForm.feedbackMessage = err.errors[0].key;
+          break;
+        case 'AxiosError':
+          state.rssForm.feedbackMessage = 'networkError';
+          break;
+        default:
+          console.log(`Unknown error: ${err.name}`);
+          console.log(err);
+      }
+    });
+};
 
+const app = () => {
+  init().then((paramState) => {
+    const state = paramState; // What's up, linter?
+    const rssForm = document.querySelector('form.rss-form');
+
+    rssForm.addEventListener('submit', (e) => {
+      state.rssForm.state = 'processing';
+      e.preventDefault();
+
+      const data = new FormData(rssForm);
+      const url = data.get('url');
+      processUrl(url, state);
+    });
     updateFeeds(state);
   });
 };

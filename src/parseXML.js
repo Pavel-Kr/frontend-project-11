@@ -14,10 +14,7 @@ const parseXML = (xmlString) => {
   const xmlDocument = parser.parseFromString(xmlString, 'application/xml');
   const errorNode = xmlDocument.querySelector('parsererror');
   if (errorNode) {
-    return {
-      ok: false,
-      reason: 'parserError',
-    };
+    throw new Error('parserError');
   }
 
   const title = xmlDocument.querySelector('title').textContent;

@@ -2,16 +2,22 @@ const renderState = (state) => {
   const rssForm = document.querySelector('form.rss-form');
   const urlInput = rssForm.querySelector('input[aria-label="url"]');
   const feedbackElement = document.querySelector('.feedback');
+  const submitButton = rssForm.querySelector('button[type="submit"]');
   switch (state) {
     case 'invalid':
       urlInput.classList.add('is-invalid');
       feedbackElement.classList.remove('text-success');
       feedbackElement.classList.add('text-danger');
+      submitButton.removeAttribute('disabled');
       break;
     case 'valid':
       urlInput.classList.remove('is-invalid');
       feedbackElement.classList.remove('text-danger');
       feedbackElement.classList.add('text-success');
+      submitButton.removeAttribute('disabled');
+      break;
+    case 'processing':
+      submitButton.setAttribute('disabled', '');
       break;
     default:
       throw new Error(`Invalid state: ${state}`);
@@ -29,7 +35,7 @@ const createCard = (headerNode, contentNode) => {
   return cardContainer;
 };
 
-const renderFeeds = (feeds, i18nextInstance) => {
+const renderFeeds = (feeds, translate) => {
   const feedContainer = document.querySelector('#feeds');
   feedContainer.innerHTML = '';
   if (feeds.length === 0) {
@@ -37,7 +43,7 @@ const renderFeeds = (feeds, i18nextInstance) => {
   }
   const feedsHeader = document.createElement('h2');
   feedsHeader.classList.add('card-title');
-  feedsHeader.textContent = i18nextInstance.t('feeds');
+  feedsHeader.textContent = translate('feeds');
 
   const listContainer = document.createElement('ul');
   listContainer.classList.add('list-group', 'border-0');
@@ -74,7 +80,7 @@ const setPostViewed = (postId, state) => {
   state.uiState.viewedPosts.push(postId);
 };
 
-const createPostElement = (post, state, i18nextInstance) => {
+const createPostElement = (post, state, translate) => {
   const listElement = document.createElement('li');
   listElement.classList.add('list-group-item', 'border-0', 'd-flex', 'justify-content-between');
 
@@ -91,7 +97,7 @@ const createPostElement = (post, state, i18nextInstance) => {
 
   const watchButton = document.createElement('button');
   watchButton.classList.add('btn', 'btn-outline-primary', 'btn-sm');
-  watchButton.textContent = i18nextInstance.t('view');
+  watchButton.textContent = translate('view');
   watchButton.setAttribute('data-bs-toggle', 'modal');
   watchButton.setAttribute('data-bs-target', '#postModal');
 
@@ -111,7 +117,7 @@ const createPostElement = (post, state, i18nextInstance) => {
   return listElement;
 };
 
-const renderPosts = (state, i18nextInstance) => {
+const renderPosts = (state, translate) => {
   const { posts } = state;
   const postsContainer = document.querySelector('#posts');
   postsContainer.innerHTML = '';
@@ -120,12 +126,12 @@ const renderPosts = (state, i18nextInstance) => {
   }
   const postsHeader = document.createElement('h2');
   postsHeader.classList.add('card-title');
-  postsHeader.textContent = i18nextInstance.t('posts');
+  postsHeader.textContent = translate('posts');
 
   const listContainer = document.createElement('ul');
   listContainer.classList.add('list-group', 'border-0');
   posts.forEach((post) => {
-    const listElement = createPostElement(post, state, i18nextInstance);
+    const listElement = createPostElement(post, state, translate);
     listContainer.append(listElement);
   });
 
@@ -133,7 +139,7 @@ const renderPosts = (state, i18nextInstance) => {
   postsContainer.append(cardContainer);
 };
 
-const render = (path, value, state, i18nextInstance) => {
+const render = (path, value, state, translate) => {
   const feedbackElement = document.querySelector('.feedback');
   const rssForm = document.querySelector('form.rss-form');
   const urlInput = rssForm.querySelector('input[aria-label="url"]');
@@ -141,19 +147,17 @@ const render = (path, value, state, i18nextInstance) => {
     case 'rssForm.state':
       renderState(value);
       break;
-    case 'rssForm.feedbackType':
-      feedbackElement.textContent = i18nextInstance.t(value);
+    case 'rssForm.feedbackMessage':
+      feedbackElement.textContent = translate(value);
       break;
     case 'feeds':
-      renderFeeds(value, i18nextInstance);
+      renderFeeds(value, translate);
+      rssForm.reset();
+      urlInput.focus();
       break;
     case 'posts':
     case 'uiState.viewedPosts':
-      renderPosts(state, i18nextInstance);
-      break;
-    case 'addedUrls':
-      rssForm.reset();
-      urlInput.focus();
+      renderPosts(state, translate);
       break;
     default:
       // Not an error, just ignore
