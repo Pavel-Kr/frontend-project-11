@@ -24,3 +24,5 @@ make build
 ```sh
 make dev
 ```
+## Preview
+![Preview](https://github.com/user-attachments/assets/1f8660c5-4924-4bd7-aec5-d3f3c60e4c22)
