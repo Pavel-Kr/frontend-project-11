@@ -1,19 +1,23 @@
-const renderState = (state) => {
+const renderState = (state, translate) => {
   const rssForm = document.querySelector('form.rss-form');
   const urlInput = rssForm.querySelector('input[aria-label="url"]');
   const feedbackElement = document.querySelector('.feedback');
   const submitButton = rssForm.querySelector('button[type="submit"]');
-  switch (state) {
+  switch (state.rssForm.state) {
+    case 'start':
+      feedbackElement.textContent = '';
+      feedbackElement.classList.remove('text-success', 'text-danger');
+      urlInput.classList.remove('is-invalid');
+      break;
     case 'invalid':
       urlInput.classList.add('is-invalid');
-      feedbackElement.classList.remove('text-success');
       feedbackElement.classList.add('text-danger');
+      feedbackElement.textContent = translate(state.rssForm.error);
       submitButton.removeAttribute('disabled');
       break;
     case 'valid':
-      urlInput.classList.remove('is-invalid');
-      feedbackElement.classList.remove('text-danger');
       feedbackElement.classList.add('text-success');
+      feedbackElement.textContent = translate('success');
       submitButton.removeAttribute('disabled');
       break;
     case 'processing':
@@ -83,6 +87,7 @@ const setPostViewed = (postId, state) => {
 const createPostElement = (post, state, translate) => {
   const listElement = document.createElement('li');
   listElement.classList.add('list-group-item', 'border-0', 'd-flex', 'justify-content-between');
+  listElement.setAttribute('data-id', post.id);
 
   const postLink = document.createElement('a');
   postLink.textContent = post.title;
@@ -101,20 +106,17 @@ const createPostElement = (post, state, translate) => {
   watchButton.setAttribute('data-bs-toggle', 'modal');
   watchButton.setAttribute('data-bs-target', '#postModal');
 
-  listElement.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-bs-toggle]');
-    const link = e.target.closest('a');
-    if (btn) {
-      setModal(post.title, post.description, post.link);
-      setPostViewed(post.id, state);
-    } else if (link) {
-      setPostViewed(post.id, state);
-    }
-  });
-
   listElement.append(postLink, watchButton);
 
   return listElement;
+};
+
+const getPostById = (postId, state) => {
+  const filteredPosts = state.posts.filter(({ id }) => id === postId);
+  if (filteredPosts.length === 0) {
+    return null;
+  }
+  return filteredPosts[0];
 };
 
 const renderPosts = (state, translate) => {
@@ -135,20 +137,35 @@ const renderPosts = (state, translate) => {
     listContainer.append(listElement);
   });
 
+  listContainer.addEventListener('click', (e) => {
+    const listElement = e.target.closest('li[data-id]');
+    if (!listElement) {
+      return;
+    }
+    const btn = e.target.closest('button[data-bs-toggle]');
+    const link = e.target.closest('a');
+    if (!btn && !link) {
+      return;
+    }
+    const post = getPostById(listElement.dataset.id, state);
+    if (btn) {
+      setModal(post.title, post.description, post.link);
+      setPostViewed(post.id, state);
+    } else if (link) {
+      setPostViewed(post.id, state);
+    }
+  });
+
   const cardContainer = createCard(postsHeader, listContainer);
   postsContainer.append(cardContainer);
 };
 
 const render = (path, value, state, translate) => {
-  const feedbackElement = document.querySelector('.feedback');
   const rssForm = document.querySelector('form.rss-form');
   const urlInput = rssForm.querySelector('input[aria-label="url"]');
   switch (path) {
     case 'rssForm.state':
-      renderState(value);
-      break;
-    case 'rssForm.feedbackMessage':
-      feedbackElement.textContent = translate(value);
+      renderState(state, translate);
       break;
     case 'feeds':
       renderFeeds(value, translate);

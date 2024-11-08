@@ -36,8 +36,8 @@ const initYup = () => {
 const init = () => {
   const state = {
     rssForm: {
-      state: 'init',
-      feedbackMessage: '',
+      state: 'start',
+      error: '',
     },
     feeds: [],
     posts: [],
@@ -52,8 +52,6 @@ const init = () => {
     .then((t) => {
       translationFunc = t;
       initYup();
-    })
-    .then(() => {
       const watchedState = onChange(
         state,
         (path, value) => render(path, value, watchedState, translationFunc),
@@ -78,27 +76,29 @@ const updateFeeds = (state) => {
   const promises = state.feeds.map(({ source }) => axios.get(getRequestUrl(source)));
   Promise.all(promises)
     .then((responses) => {
-      const results = responses.map((response) => parseXML(response.data.contents));
-      results.forEach((result) => {
-        if (!result.ok) {
-          return;
-        }
-        const { posts } = result;
-        const titles = state.posts.map((post) => post.title);
-        const includedPosts = posts
-          .filter((post) => !titles.includes(post.title))
-          .map(mapPostToState);
-        state.posts.unshift(...includedPosts);
-      });
-      setTimeout(() => updateFeeds(state), 5000);
+      try {
+        const results = responses.map((response) => parseXML(response.data.contents));
+        results.forEach((result) => {
+          const { posts } = result;
+          const titles = state.posts.map((post) => post.title);
+          const includedPosts = posts
+            .filter((post) => !titles.includes(post.title))
+            .map(mapPostToState);
+          state.posts.unshift(...includedPosts);
+        });
+      } catch (e) {
+        console.log(e);
+      }
     })
     .catch((err) => {
       console.log(err);
+    })
+    .finally(() => {
+      setTimeout(() => updateFeeds(state), 5000);
     });
 };
 
-const validateUrl = (url, state) => {
-  const sources = state.feeds.map(({ source }) => source);
+const validateUrl = (url, sources) => {
   const schema = object({
     url: string()
       .url()
@@ -109,14 +109,17 @@ const validateUrl = (url, state) => {
 };
 
 const processUrl = (url, paramState) => {
-  const state = paramState; // How do you like it, linter? No param reassign, sure
-  validateUrl(url, state)
-    .then(() => axios.get(getRequestUrl(url)))
+  const state = paramState;
+  const sources = state.feeds.map(({ source }) => source);
+  validateUrl(url, sources)
+    .then(() => {
+      state.rssForm.state = 'processing';
+      return axios.get(getRequestUrl(url));
+    })
     .then((response) => {
       try {
         const result = parseXML(response.data.contents);
         state.rssForm.state = 'valid';
-        state.rssForm.feedbackMessage = 'success';
 
         const { ok, posts: rssPosts, ...rssFeed } = result;
         const feed = {
@@ -128,40 +131,40 @@ const processUrl = (url, paramState) => {
         state.feeds.unshift(feed);
         state.posts.unshift(...posts);
       } catch (e) {
+        state.rssForm.error = 'parserError';
         state.rssForm.state = 'invalid';
-        state.rssForm.feedbackMessage = e.message;
       }
     })
     .catch((err) => {
-      state.rssForm.state = 'invalid';
       switch (err.name) {
         case 'ValidationError':
-          state.rssForm.feedbackMessage = err.errors[0].key;
+          state.rssForm.error = err.errors[0].key;
           break;
         case 'AxiosError':
-          state.rssForm.feedbackMessage = 'networkError';
+          state.rssForm.error = 'networkError';
           break;
         default:
           console.log(`Unknown error: ${err.name}`);
           console.log(err);
       }
+      state.rssForm.state = 'invalid';
     });
 };
 
 const app = () => {
   init().then((paramState) => {
-    const state = paramState; // What's up, linter?
+    const { rssForm: rssFormState } = paramState;
     const rssForm = document.querySelector('form.rss-form');
 
     rssForm.addEventListener('submit', (e) => {
-      state.rssForm.state = 'processing';
+      rssFormState.state = 'start';
       e.preventDefault();
 
       const data = new FormData(rssForm);
       const url = data.get('url');
-      processUrl(url, state);
+      processUrl(url, paramState);
     });
-    updateFeeds(state);
+    updateFeeds(paramState);
   });
 };
 

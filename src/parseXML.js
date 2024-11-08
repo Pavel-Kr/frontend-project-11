@@ -14,7 +14,7 @@ const parseXML = (xmlString) => {
   const xmlDocument = parser.parseFromString(xmlString, 'application/xml');
   const errorNode = xmlDocument.querySelector('parsererror');
   if (errorNode) {
-    throw new Error('parserError');
+    throw new Error();
   }
 
   const title = xmlDocument.querySelector('title').textContent;
@@ -23,7 +23,6 @@ const parseXML = (xmlString) => {
   const posts = Array.from(postNodes).map(mapPost);
 
   return {
-    ok: true,
     title,
     description,
     posts,
