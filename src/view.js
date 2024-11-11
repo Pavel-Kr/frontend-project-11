@@ -4,7 +4,7 @@ const renderState = (state, translate) => {
   const feedbackElement = document.querySelector('.feedback');
   const submitButton = rssForm.querySelector('button[type="submit"]');
   switch (state.rssForm.state) {
-    case 'start':
+    case 'initial':
       feedbackElement.textContent = '';
       feedbackElement.classList.remove('text-success', 'text-danger');
       urlInput.classList.remove('is-invalid');

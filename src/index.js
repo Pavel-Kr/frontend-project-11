@@ -36,8 +36,8 @@ const initYup = () => {
 const init = () => {
   const state = {
     rssForm: {
-      state: 'start',
-      error: '',
+      state: 'initial',
+      error: null,
     },
     feeds: [],
     posts: [],
@@ -46,15 +46,12 @@ const init = () => {
     },
   };
 
-  let translationFunc;
-
   return initI18Next()
     .then((t) => {
-      translationFunc = t;
       initYup();
       const watchedState = onChange(
         state,
-        (path, value) => render(path, value, watchedState, translationFunc),
+        (path, value) => render(path, value, watchedState, t),
       );
       return watchedState;
     });
@@ -157,7 +154,7 @@ const app = () => {
     const rssForm = document.querySelector('form.rss-form');
 
     rssForm.addEventListener('submit', (e) => {
-      rssFormState.state = 'start';
+      rssFormState.state = 'initial';
       e.preventDefault();
 
       const data = new FormData(rssForm);
